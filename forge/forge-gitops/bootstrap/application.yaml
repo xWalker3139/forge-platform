@@ -1,0 +1,21 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: forge-demo-service-dev
+  namespace: argocd
+spec:
+  project: forge
+  source:
+    repoURL: https://github.com/xWalker3139/forge-gitops.git
+    targetRevision: main
+    path: charts/forge-service
+    helm:
+      valueFiles:
+        - ../../environments/dev/values.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: forge-dev
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

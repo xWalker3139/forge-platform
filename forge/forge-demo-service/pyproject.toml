@@ -1,0 +1,28 @@
+[build-system]
+requires = ["hatchling==1.27.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "forge-demo-service"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = ["fastapi==0.115.12", "uvicorn==0.34.2", "prometheus-client==0.21.1"]
+
+[project.scripts]
+forge-service = "forge_service.main:run"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/forge_service"]
+
+[dependency-groups]
+dev = ["pytest==8.3.5", "httpx==0.28.1", "ruff==0.11.8"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B"]

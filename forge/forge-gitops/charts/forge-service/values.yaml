@@ -1,0 +1,28 @@
+replicaCount: 2
+image:
+  repository: forge-demo-service
+  tag: local
+  digest: ''
+  pullPolicy: IfNotPresent
+faultInjection: false
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 256Mi
+autoscaling:
+  enabled: false
+  minReplicas: 2
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 70
+monitoring:
+  enabled: false
+  release: monitoring
+networkPolicy:
+  enabled: false
+  allowedNamespace: default
+progressiveDelivery:
+  enabled: false
+  prometheusURL: http://monitoring-kube-prometheus-prometheus.monitoring.svc:9090

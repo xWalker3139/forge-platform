@@ -1,0 +1,14 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: forge
+  namespace: argocd
+spec:
+  sourceRepos:
+    - https://github.com/xWalker3139/forge-gitops.git
+  destinations:
+    - namespace: forge-dev
+      server: https://kubernetes.default.svc
+  namespaceResourceWhitelist:
+    - group: '*'
+      kind: '*'

@@ -1,0 +1,25 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: forge-slo
+  namespace: monitoring
+  labels:
+    release: monitoring
+spec:
+  groups:
+    - name: forge
+      rules:
+        - alert: ForgeHighErrorRate
+          expr: sum(rate(forge_http_requests_total{status=~"5.."}[5m])) / clamp_min(sum(rate(forge_http_requests_total[5m])), 0.001) > 0.05
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: More than 5% of application requests return 5xx
+        - alert: ForgeHighLatency
+          expr: histogram_quantile(0.95, sum by (le) (rate(forge_http_request_duration_seconds_bucket[5m]))) > 0.5
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: Application p95 latency exceeds 500ms

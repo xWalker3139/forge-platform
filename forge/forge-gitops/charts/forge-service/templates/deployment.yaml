@@ -1,0 +1,82 @@
+{{- if and .Values.progressiveDelivery.enabled (not .Values.monitoring.enabled) }}
+{{- fail "Progressive delivery requires monitoring.enabled and a running Prometheus stack" }}
+{{- end }}
+apiVersion: {{ if .Values.progressiveDelivery.enabled }}argoproj.io/v1alpha1{{ else }}apps/v1{{ end }}
+kind: {{ if .Values.progressiveDelivery.enabled }}Rollout{{ else }}Deployment{{ end }}
+metadata:
+  name: {{ .Release.Name }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  revisionHistoryLimit: 5
+  strategy:
+    {{- if .Values.progressiveDelivery.enabled }}
+    canary:
+      maxUnavailable: 0
+      maxSurge: 1
+      steps:
+        - setWeight: 20
+        - pause: {duration: 60s}
+        - analysis:
+            templates:
+              - templateName: {{ .Release.Name }}-success-rate
+        - setWeight: 50
+        - pause: {duration: 60s}
+        - analysis:
+            templates:
+              - templateName: {{ .Release.Name }}-success-rate
+        - setWeight: 100
+    {{- else }}
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+    {{- end }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/instance: {{ .Release.Name }}
+    spec:
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 30
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: service
+          image: {{ if .Values.image.digest }}{{ printf "%s@%s" .Values.image.repository .Values.image.digest | quote }}{{ else }}{{ printf "%s:%s" .Values.image.repository .Values.image.tag | quote }}{{ end }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 8080
+          env:
+            - name: ENABLE_FAULTS
+              value: {{ .Values.faultInjection | quote }}
+          startupProbe:
+            httpGet: {path: /health/live, port: http}
+            failureThreshold: 30
+            periodSeconds: 2
+          readinessProbe:
+            httpGet: {path: /health/ready, port: http}
+            periodSeconds: 5
+          livenessProbe:
+            httpGet: {path: /health/live, port: http}
+            periodSeconds: 10
+          securityContext:
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            - {name: tmp, mountPath: /tmp}
+      volumes:
+        - name: tmp
+          emptyDir: {}

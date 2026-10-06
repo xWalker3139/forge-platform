@@ -1,0 +1,7 @@
+replicaCount: 2
+image:
+  repository: forge-demo-service
+  tag: local
+faultInjection: true
+monitoring:
+  enabled: false
